@@ -162,14 +162,18 @@ export const getAudioSources = async (obs: OBSWebSocket): Promise<any[]> => {
     const sourcesWithDetails = await Promise.all(
       audioSources.map(async (source: any) => {
         try {
-          const { inputVolumeMul, inputMuted } = await obs.call('GetInputVolume', {
+          const inputVolumeResponse = await obs.call('GetInputVolume', {
+            inputName: source.inputName
+          });
+          
+          const inputMuteResponse = await obs.call('GetInputMute', {
             inputName: source.inputName
           });
           
           return {
             ...source,
-            volume: inputVolumeMul,
-            muted: inputMuted
+            volume: inputVolumeResponse.inputVolumeMul,
+            muted: inputMuteResponse.inputMuted
           };
         } catch {
           return source;

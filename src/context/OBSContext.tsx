@@ -102,14 +102,18 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
       const sourcesWithDetails = await Promise.all(
         audioSourcesData.map(async (source: any) => {
           try {
-            const { inputVolumeMul, inputMuted } = await obs.call('GetInputVolume', {
+            const inputVolumeResponse = await obs.call('GetInputVolume', {
+              inputName: source.inputName
+            });
+            
+            const inputMuteResponse = await obs.call('GetInputMute', {
               inputName: source.inputName
             });
             
             return {
               ...source,
-              volume: inputVolumeMul,
-              muted: inputMuted
+              volume: inputVolumeResponse.inputVolumeMul,
+              muted: inputMuteResponse.inputMuted
             };
           } catch {
             return source;
@@ -140,9 +144,17 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     if (!isConnected) return;
     
     try {
-      const { outputActive, outputPaused } = await obs.call('GetRecordStatus');
+      const response = await obs.call('GetRecordStatus');
+      const outputActive = response.outputActive;
+      
+      // Check if we have outputPaused in the response
+      let isPaused = false;
+      if ('outputPaused' in response) {
+        isPaused = response.outputPaused;
+      }
+      
       if (outputActive) {
-        setRecordingStatus(outputPaused ? 'paused' : 'recording');
+        setRecordingStatus(isPaused ? 'paused' : 'recording');
       } else {
         setRecordingStatus('stopped');
       }
@@ -155,14 +167,16 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     if (!isConnected) return;
     
     try {
-      const stats = await obs.call('GetStats');
-      setStats({
-        cpuUsage: stats.cpuUsage,
-        memoryUsage: stats.memoryUsage,
-        fps: stats.activeFps,
-        renderTime: stats.averageFrameRenderTime,
-        outputSkippedFrames: stats.renderSkippedFrames
-      });
+      const statsData = await obs.call('GetStats');
+      const typeSafeStats: OBSContextType['stats'] = {
+        cpuUsage: typeof statsData.cpuUsage === 'number' ? statsData.cpuUsage : undefined,
+        memoryUsage: typeof statsData.memoryUsage === 'number' ? statsData.memoryUsage : undefined,
+        fps: typeof statsData.activeFps === 'number' ? statsData.activeFps : undefined,
+        renderTime: typeof statsData.averageFrameRenderTime === 'number' ? statsData.averageFrameRenderTime : undefined,
+        outputSkippedFrames: typeof statsData.renderSkippedFrames === 'number' ? statsData.renderSkippedFrames : undefined
+      };
+      
+      setStats(typeSafeStats);
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
@@ -392,9 +406,16 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
         await refreshAudioSources();
       });
       
-      obs.on('RecordStateChanged', async ({ outputActive, outputPaused }) => {
+      obs.on('RecordStateChanged', async (data) => {
+        const outputActive = data.outputActive;
+        let isPaused = false;
+        
+        if ('outputPaused' in data) {
+          isPaused = data.outputPaused;
+        }
+        
         if (outputActive) {
-          setRecordingStatus(outputPaused ? 'paused' : 'recording');
+          setRecordingStatus(isPaused ? 'paused' : 'recording');
         } else {
           setRecordingStatus('stopped');
         }

@@ -6,7 +6,7 @@ import {
   VideoIcon, 
   PauseIcon, 
   PlayIcon, 
-  StopIcon, 
+  Square as StopSquare, 
   RadioIcon,
   Video,
   Radio
@@ -74,7 +74,7 @@ const StreamControls = () => {
                   onClick={stopRecording}
                   className="flex-1"
                 >
-                  <StopIcon className="w-4 h-4 mr-2" />
+                  <StopSquare className="w-4 h-4 mr-2" />
                   Stop
                 </Button>
                 
@@ -141,7 +141,7 @@ const StreamControls = () => {
                 onClick={stopStreaming}
                 className="flex-1"
               >
-                <StopIcon className="w-4 h-4 mr-2" />
+                <StopSquare className="w-4 h-4 mr-2" />
                 Stop Streaming
               </Button>
             )}
