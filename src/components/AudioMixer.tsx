@@ -1,71 +1,122 @@
-
-import React from 'react';
+import React, { useState, useCallback } from 'react';
+import { Volume2, VolumeX, Volume1, Save, RefreshCw } from 'lucide-react';
 import { useOBS } from '@/context/OBSContext';
-import { Volume2, VolumeX, MicIcon } from 'lucide-react';
-import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import AudioMonitor from './AudioMonitor';
+
+interface AudioPreset {
+  sceneName: string;
+  settings: Record<string, { volume: number; muted: boolean }>;
+}
 
 const AudioMixer = () => {
-  const { isConnected, audioSources, setAudioVolume, toggleAudioMute } = useOBS();
+  const { isConnected, audioSources, setAudioVolume, toggleAudioMute, currentScene} = useOBS();
+  const [presets, setPresets] = useState<AudioPreset[]>(() => {
+    const saved = localStorage.getItem('audioPresets');
+    return saved ? JSON.parse(saved) : [];
+  });
 
-  if (!isConnected) {
-    return null;
-  }
+  const savePreset = useCallback(() => {
+    const preset: AudioPreset = {
+      sceneName: currentScene,
+      settings: audioSources.reduce((acc, source) => ({
+        ...acc,
+        [source.inputName]: {
+          volume: source.volume,
+          muted: source.muted
+        }
+      }), {})
+    };
+
+    const newPresets = [...presets.filter(p => p.sceneName !== currentScene), preset];
+    setPresets(newPresets);
+    localStorage.setItem('audioPresets', JSON.stringify(newPresets));
+    toast.success('Audio preset saved');
+  }, [currentScene, audioSources, presets]);
+
+  const loadPreset = useCallback(() => {
+    const preset = presets.find(p => p.sceneName === currentScene);
+    if (!preset) return;
+
+    Object.entries(preset.settings).forEach(([inputName, settings]) => {
+      if (!settings.muted) setAudioVolume(inputName, settings.volume);
+      toggleAudioMute(inputName, settings.muted);
+    });
+    toast.success('Audio preset loaded');
+  }, [currentScene, presets, setAudioVolume, toggleAudioMute]);
+
+  if (!isConnected) return null;
+
+  const getVolumeIcon = (volume: number, isMuted: boolean) => {
+    if (isMuted) return <VolumeX className="w-4 h-4" />;
+    if (volume > 0.5) return <Volume2 className="w-4 h-4" />;
+    return <Volume1 className="w-4 h-4" />;
+  };
 
   return (
-    <div className="glass-card p-5 animate-scale-in">
-      <div className="flex items-center gap-2 mb-4">
-        <Volume2 className="w-5 h-5 text-primary" />
-        <h2 className="text-lg font-medium">Audio Mixer</h2>
+    <div className="glass-card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Volume2 className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-medium">Audio Mixer - {currentScene}</h2>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={savePreset}
+          >
+            <Save className="w-4 h-4 mr-2" />
+            Save Preset
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={loadPreset}
+            disabled={!presets.some(p => p.sceneName === currentScene)}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Load Preset
+          </Button>
+        </div>
       </div>
-      
-      {audioSources.length > 0 ? (
-        <div className="space-y-4">
-          {audioSources.map((source) => (
-            <div key={source.inputName} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MicIcon className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium truncate max-w-[160px]">
-                    {source.inputName}
-                  </span>
-                </div>
-                <button
-                  className="icon-btn"
-                  onClick={() => toggleAudioMute(source.inputName, !source.muted)}
-                >
-                  {source.muted ? (
-                    <VolumeX className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <Volume2 className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-              
-              <div className={cn("transition-opacity", {
-                "opacity-50": source.muted
-              })}>
+
+      <div className="space-y-4">
+        {audioSources.map((source) => (
+          <div key={source.inputName} className="flex items-center gap-4">
+            <button
+              onClick={() => toggleAudioMute(source.inputName, !source.muted)}
+              className={cn(
+                "p-2 rounded-md hover:bg-secondary/50 transition-colors",
+                source.muted && "text-muted-foreground"
+              )}
+            >
+              {getVolumeIcon(source.volume, source.muted)}
+            </button>
+            
+            <div className="flex-1">
+              <p className="text-sm mb-1">{source.inputName}</p>
+              <div className="space-y-2">
                 <Slider
-                  value={[source.volume ? source.volume * 100 : 0]}
-                  min={0}
+                  defaultValue={[source.volume * 100]}
                   max={100}
                   step={1}
-                  onValueChange={(value) => setAudioVolume(source.inputName, value[0] / 100)}
                   disabled={source.muted}
-                  className="w-full"
+                  onValueChange={(value) => setAudioVolume(source.inputName, value[0] / 100)}
                 />
-                <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                  <span>0%</span>
-                  <span>{Math.round(source.volume ? source.volume * 100 : 0)}%</span>
-                  <span>100%</span>
-                </div>
+                <AudioMonitor sourceName={source.inputName} />
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-muted-foreground text-sm py-2">No audio sources available</div>
-      )}
+            
+            <span className="text-sm w-12 text-right">
+              {Math.round(source.volume * 100)}%
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

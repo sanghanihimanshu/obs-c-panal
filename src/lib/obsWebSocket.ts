@@ -1,4 +1,4 @@
-import OBSWebSocket, { JsonValue } from 'obs-websocket-js';
+import OBSWebSocket from 'obs-websocket-js';
 
 export const createOBSConnection = (url: string, password?: string): Promise<OBSWebSocket> => {
   const obs = new OBSWebSocket();
@@ -21,10 +21,10 @@ export const disconnectOBS = (obs: OBSWebSocket): void => {
 export const getScenes = async (obs: OBSWebSocket): Promise<any[]> => {
   try {
     const { scenes } = await obs.call('GetSceneList');
-    return scenes;
+    return scenes || [];
   } catch (error) {
     console.error('Error fetching scenes:', error);
-    return [];
+    throw error;
   }
 };
 
@@ -82,7 +82,7 @@ export const toggleSourceVisibility = async (
     
     await obs.call('SetSceneItemEnabled', {
       sceneName,
-      sceneItemId: sceneItem.sceneItemId,
+      sceneItemId: sceneItem.sceneItemId as number,
       sceneItemEnabled: visible
     });
   } catch (error) {
@@ -228,7 +228,7 @@ export const toggleAudioMute = async (
   }
 };
 
-const safeNumberConversion = (value: JsonValue | undefined): number | undefined => {
+const safeNumberConversion = (value: any | undefined): number | undefined => {
   if (value === undefined || value === null) {
     return undefined;
   }

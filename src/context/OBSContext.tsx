@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import OBSWebSocket, { JsonValue } from 'obs-websocket-js';
+import OBSWebSocket from 'obs-websocket-js';
 import { toast } from 'sonner';
 
 type OBSContextType = {
@@ -31,11 +31,12 @@ type OBSContextType = {
     renderTime?: number;
     outputSkippedFrames?: number;
   };
+  refreshAll: () => Promise<void>;
 };
 
 const OBSContext = createContext<OBSContextType | undefined>(undefined);
 
-const safeNumberConversion = (value: JsonValue | undefined): number | undefined => {
+const safeNumberConversion = (value: any | undefined): number | undefined => {
   if (value === undefined || value === null) {
     return undefined;
   }
@@ -65,22 +66,52 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
   const [stats, setStats] = useState<OBSContextType['stats']>({});
 
   const refreshScenes = async () => {
-    if (!isConnected) return;
-    
+    if (!isConnected) {
+      console.log('Not fetching scenes - OBS not connected');
+      return;
+    }
+
     try {
-      const { scenes } = await obs.call('GetSceneList');
-      setScenes(scenes);
+      // Get scene list with retries
+      let retryCount = 0;
+      const maxRetries = 3;
+      let sceneList;
+
+      while (retryCount < maxRetries) {
+        try {
+          sceneList = await obs.call('GetSceneList');
+          break;
+        } catch (error) {
+          retryCount++;
+          if (retryCount === maxRetries) throw error;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      if (!sceneList?.scenes?.length) {
+        throw new Error('No scenes available');
+      }
+
+      setScenes(sceneList.scenes);
       
-      const { currentProgramSceneName } = await obs.call('GetCurrentProgramScene');
-      setCurrentSceneState(currentProgramSceneName);
-      
-      return scenes;
-    } catch (error) {
-      console.error('Error fetching scenes:', error);
-      toast.error('Failed to fetch scenes');
+      // Get current scene
+      const currentSceneResponse = await obs.call('GetCurrentProgramScene');
+      if (currentSceneResponse?.currentProgramSceneName) {
+        setCurrentSceneState(currentSceneResponse.currentProgramSceneName);
+        await Promise.all([
+          refreshSources(),
+          refreshAudioSources()
+        ]);
+      }
+
+      return sceneList.scenes;
+    } catch (error: any) {
+      console.error('Scene loading error:', error);
+      toast.error(`Scene loading failed: ${error.message}`);
+      return [];
     }
   };
-  
+
   const refreshSources = async () => {
     if (!isConnected || !currentScene) return;
     
@@ -283,7 +314,7 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
       
       await obs.call('SetSceneItemEnabled', {
         sceneName: currentScene,
-        sceneItemId: sceneItem.sceneItemId,
+        sceneItemId: sceneItem.sceneItemId as number,
         sceneItemEnabled: visible
       });
       
@@ -444,6 +475,16 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
       obs.on('StreamStateChanged', async ({ outputActive }) => {
         setStreamingStatus(outputActive ? 'streaming' : 'stopped');
       });
+
+      // Add scene-specific handlers
+      obs.on('SceneCreated', refreshScenes);
+      obs.on('SceneRemoved', refreshScenes);
+      obs.on('SceneNameChanged', refreshScenes);
+      
+      // Add audio monitoring handlers
+      obs.on('InputVolumeMeters', (data) => {
+        console.log('Audio levels:', data);
+      });
     };
     
     setupEventHandlers();
@@ -468,6 +509,13 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isConnected, currentScene]);
 
+  // Add this effect to sync audio with scene changes
+  useEffect(() => {
+    if (currentScene) {
+      refreshAudioSources();
+    }
+  }, [currentScene]);
+
   const contextValue: OBSContextType = {
     obs,
     isConnected,
@@ -490,7 +538,8 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     audioSources,
     setAudioVolume,
     toggleAudioMute,
-    stats
+    stats,
+    refreshAll
   };
 
   return (
