@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import OBSWebSocket from 'obs-websocket-js';
 import { toast } from 'sonner';
@@ -154,7 +155,7 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
       
       let isPaused = false;
       if ('outputPaused' in response) {
-        isPaused = response.outputPaused as boolean;
+        isPaused = Boolean(response.outputPaused);
       }
       
       if (outputActive) {
@@ -175,33 +176,43 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
       const typeSafeStats: OBSContextType['stats'] = {
         cpuUsage: typeof statsData.cpuUsage === 'number' 
           ? statsData.cpuUsage 
-          : statsData.cpuUsage !== undefined && statsData.cpuUsage !== null
-            ? Number(statsData.cpuUsage)
-            : undefined,
+          : typeof statsData.cpuUsage === 'string'
+            ? parseFloat(statsData.cpuUsage)
+            : statsData.cpuUsage !== undefined && statsData.cpuUsage !== null
+              ? parseFloat(String(statsData.cpuUsage))
+              : undefined,
             
         memoryUsage: typeof statsData.memoryUsage === 'number' 
           ? statsData.memoryUsage 
-          : statsData.memoryUsage !== undefined && statsData.memoryUsage !== null
-            ? Number(statsData.memoryUsage)
-            : undefined,
+          : typeof statsData.memoryUsage === 'string'
+            ? parseFloat(statsData.memoryUsage)
+            : statsData.memoryUsage !== undefined && statsData.memoryUsage !== null
+              ? parseFloat(String(statsData.memoryUsage))
+              : undefined,
             
         fps: typeof statsData.activeFps === 'number' 
           ? statsData.activeFps 
-          : statsData.activeFps !== undefined && statsData.activeFps !== null
-            ? Number(statsData.activeFps)
-            : undefined,
+          : typeof statsData.activeFps === 'string'
+            ? parseFloat(statsData.activeFps)
+            : statsData.activeFps !== undefined && statsData.activeFps !== null
+              ? parseFloat(String(statsData.activeFps))
+              : undefined,
             
         renderTime: typeof statsData.averageFrameRenderTime === 'number' 
           ? statsData.averageFrameRenderTime 
-          : statsData.averageFrameRenderTime !== undefined && statsData.averageFrameRenderTime !== null
-            ? Number(statsData.averageFrameRenderTime)
-            : undefined,
+          : typeof statsData.averageFrameRenderTime === 'string'
+            ? parseFloat(statsData.averageFrameRenderTime)
+            : statsData.averageFrameRenderTime !== undefined && statsData.averageFrameRenderTime !== null
+              ? parseFloat(String(statsData.averageFrameRenderTime))
+              : undefined,
             
         outputSkippedFrames: typeof statsData.renderSkippedFrames === 'number' 
           ? statsData.renderSkippedFrames 
-          : statsData.renderSkippedFrames !== undefined && statsData.renderSkippedFrames !== null
-            ? Number(statsData.renderSkippedFrames)
-            : undefined
+          : typeof statsData.renderSkippedFrames === 'string'
+            ? parseFloat(statsData.renderSkippedFrames)
+            : statsData.renderSkippedFrames !== undefined && statsData.renderSkippedFrames !== null
+              ? parseFloat(String(statsData.renderSkippedFrames))
+              : undefined
       };
       
       setStats(typeSafeStats);
