@@ -1,5 +1,4 @@
-
-import OBSWebSocket from 'obs-websocket-js';
+import OBSWebSocket, { JsonValue } from 'obs-websocket-js';
 
 export const createOBSConnection = (url: string, password?: string): Promise<OBSWebSocket> => {
   const obs = new OBSWebSocket();
@@ -229,40 +228,33 @@ export const toggleAudioMute = async (
   }
 };
 
+const safeNumberConversion = (value: JsonValue | undefined): number | undefined => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  
+  if (typeof value === 'number') {
+    return value;
+  }
+  
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? undefined : parsed;
+  }
+  
+  return undefined;
+};
+
 export const getStats = async (obs: OBSWebSocket): Promise<any> => {
   try {
     const statsData = await obs.call('GetStats');
     
     const processedStats = {
-      cpuUsage: typeof statsData.cpuUsage === 'number' 
-        ? statsData.cpuUsage 
-        : typeof statsData.cpuUsage === 'string'
-          ? parseFloat(statsData.cpuUsage)
-          : undefined,
-          
-      memoryUsage: typeof statsData.memoryUsage === 'number' 
-        ? statsData.memoryUsage 
-        : typeof statsData.memoryUsage === 'string'
-          ? parseFloat(statsData.memoryUsage)
-          : undefined,
-          
-      activeFps: typeof statsData.activeFps === 'number' 
-        ? statsData.activeFps 
-        : typeof statsData.activeFps === 'string'
-          ? parseFloat(statsData.activeFps)
-          : undefined,
-          
-      averageFrameRenderTime: typeof statsData.averageFrameRenderTime === 'number' 
-        ? statsData.averageFrameRenderTime 
-        : typeof statsData.averageFrameRenderTime === 'string'
-          ? parseFloat(statsData.averageFrameRenderTime)
-          : undefined,
-          
-      renderSkippedFrames: typeof statsData.renderSkippedFrames === 'number' 
-        ? statsData.renderSkippedFrames 
-        : typeof statsData.renderSkippedFrames === 'string'
-          ? parseFloat(statsData.renderSkippedFrames)
-          : undefined
+      cpuUsage: safeNumberConversion(statsData.cpuUsage),
+      memoryUsage: safeNumberConversion(statsData.memoryUsage),
+      activeFps: safeNumberConversion(statsData.activeFps),
+      averageFrameRenderTime: safeNumberConversion(statsData.averageFrameRenderTime),
+      renderSkippedFrames: safeNumberConversion(statsData.renderSkippedFrames)
     };
     
     return processedStats;

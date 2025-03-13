@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import OBSWebSocket from 'obs-websocket-js';
+import OBSWebSocket, { JsonValue } from 'obs-websocket-js';
 import { toast } from 'sonner';
 
 type OBSContextType = {
@@ -34,6 +34,23 @@ type OBSContextType = {
 };
 
 const OBSContext = createContext<OBSContextType | undefined>(undefined);
+
+const safeNumberConversion = (value: JsonValue | undefined): number | undefined => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  
+  if (typeof value === 'number') {
+    return value;
+  }
+  
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? undefined : parsed;
+  }
+  
+  return undefined;
+};
 
 export const OBSProvider = ({ children }: { children: ReactNode }) => {
   const [obs] = useState<OBSWebSocket>(() => new OBSWebSocket());
@@ -173,35 +190,11 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     try {
       const statsData = await obs.call('GetStats');
       const typeSafeStats: OBSContextType['stats'] = {
-        cpuUsage: typeof statsData.cpuUsage === 'number' 
-          ? statsData.cpuUsage 
-          : typeof statsData.cpuUsage === 'string'
-            ? parseFloat(statsData.cpuUsage)
-            : undefined,
-            
-        memoryUsage: typeof statsData.memoryUsage === 'number' 
-          ? statsData.memoryUsage 
-          : typeof statsData.memoryUsage === 'string'
-            ? parseFloat(statsData.memoryUsage)
-            : undefined,
-            
-        fps: typeof statsData.activeFps === 'number' 
-          ? statsData.activeFps 
-          : typeof statsData.activeFps === 'string'
-            ? parseFloat(statsData.activeFps)
-            : undefined,
-            
-        renderTime: typeof statsData.averageFrameRenderTime === 'number' 
-          ? statsData.averageFrameRenderTime 
-          : typeof statsData.averageFrameRenderTime === 'string'
-            ? parseFloat(statsData.averageFrameRenderTime)
-            : undefined,
-            
-        outputSkippedFrames: typeof statsData.renderSkippedFrames === 'number' 
-          ? statsData.renderSkippedFrames 
-          : typeof statsData.renderSkippedFrames === 'string'
-            ? parseFloat(statsData.renderSkippedFrames)
-            : undefined
+        cpuUsage: safeNumberConversion(statsData.cpuUsage),
+        memoryUsage: safeNumberConversion(statsData.memoryUsage),
+        fps: safeNumberConversion(statsData.activeFps),
+        renderTime: safeNumberConversion(statsData.averageFrameRenderTime),
+        outputSkippedFrames: safeNumberConversion(statsData.renderSkippedFrames)
       };
       
       setStats(typeSafeStats);
