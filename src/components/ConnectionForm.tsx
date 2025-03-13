@@ -1,10 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { useOBS } from '@/context/OBSContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { LockIcon, WifiIcon, WifiOffIcon } from 'lucide-react';
+import { LockIcon, WifiIcon, WifiOffIcon, ShieldIcon, InfoIcon } from 'lucide-react';
 import { storage } from '@/lib/storage';
-import { Checkbox } from '@radix-ui/react-checkbox';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const ConnectionForm = () => {
   const { isConnected, isConnecting, connect, disconnect } = useOBS();
@@ -12,6 +14,16 @@ const ConnectionForm = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [allowStore, setAllowStore] = useState(false);
+  const [showSecurityWarning, setShowSecurityWarning] = useState(false);
+
+  // Check if the connection is insecure (ws://) versus secure (wss://)
+  const isInsecureConnection = url.startsWith('ws://');
+  const isSecureContext = window.isSecureContext;
+
+  useEffect(() => {
+    // Show security warning if trying to use insecure WebSocket in secure context
+    setShowSecurityWarning(isSecureContext && isInsecureConnection);
+  }, [url, isSecureContext, isInsecureConnection]);
 
   useEffect(() => {
     const savedCreds = storage.getCredentials();
@@ -20,7 +32,10 @@ const ConnectionForm = () => {
       setPassword(savedCreds.password);
       setAllowStore(true);
       if (savedCreds.allowStore) {
-        connect(savedCreds.url, savedCreds.password);
+        // Don't auto-connect if we're in a secure context with an insecure URL
+        if (!(window.isSecureContext && savedCreds.url.startsWith('ws://'))) {
+          connect(savedCreds.url, savedCreds.password);
+        }
       }
     }
   }, []);
@@ -38,6 +53,12 @@ const ConnectionForm = () => {
     }
   };
 
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUrl = e.target.value;
+    setUrl(newUrl);
+    setShowSecurityWarning(window.isSecureContext && newUrl.startsWith('ws://'));
+  };
+
   return (
     <div className="obs-panel p-6 mb-6">
       <div className="text-sm font-medium flex items-center gap-2 mb-4">
@@ -45,15 +66,33 @@ const ConnectionForm = () => {
         <span>{isConnected ? 'Connected to OBS Studio' : 'Not Connected'}</span>
       </div>
       
+      {showSecurityWarning && (
+        <Alert variant="destructive" className="mb-4">
+          <InfoIcon className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            Insecure WebSocket (ws://) connections may not work in secure contexts. Try using wss:// or enable "Mixed Content" in your browser settings.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <form onSubmit={handleConnect} className="space-y-4">
         <div className="space-y-2">
-          <label htmlFor="url" className="text-sm font-medium">
+          <label htmlFor="url" className="text-sm font-medium flex items-center gap-2">
             WebSocket URL
+            {isInsecureConnection ? (
+              <span className="text-xs text-orange-500 flex items-center">
+                <ShieldIcon className="h-3 w-3 mr-1" /> Insecure
+              </span>
+            ) : (
+              <span className="text-xs text-green-500 flex items-center">
+                <ShieldIcon className="h-3 w-3 mr-1" /> Secure
+              </span>
+            )}
           </label>
           <Input
             id="url"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={handleUrlChange}
             placeholder="ws://localhost:4455"
             className="transition-all duration-200"
             disabled={isConnected || isConnecting}

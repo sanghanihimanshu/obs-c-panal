@@ -72,7 +72,6 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      // Get scene list with retries
       let retryCount = 0;
       const maxRetries = 3;
       let sceneList;
@@ -94,7 +93,6 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
 
       setScenes(sceneList.scenes);
       
-      // Get current scene
       const currentSceneResponse = await obs.call('GetCurrentProgramScene');
       if (currentSceneResponse?.currentProgramSceneName) {
         setCurrentSceneState(currentSceneResponse.currentProgramSceneName);
@@ -253,13 +251,28 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     setIsConnecting(true);
     
     try {
+      if (window.isSecureContext && url.startsWith('ws://')) {
+        console.warn('Attempting to connect to insecure WebSocket from secure context');
+      }
+
       await obs.connect(url, password);
       setIsConnected(true);
       toast.success('Connected to OBS Studio');
       await refreshAll();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Connection failed:', error);
-      toast.error('Failed to connect to OBS Studio');
+      
+      let errorMessage = 'Failed to connect to OBS Studio';
+      
+      if (error.code === 1006) {
+        errorMessage = 'Connection closed abnormally. Check if OBS is running with WebSocket enabled.';
+      } else if (error.message?.includes('Mixed Content')) {
+        errorMessage = 'Cannot connect to insecure WebSocket (ws://) from secure context. Try using wss:// or enabling mixed content in browser settings.';
+      } else if (error.message) {
+        errorMessage = `Connection error: ${error.message}`;
+      }
+      
+      toast.error(errorMessage);
       setIsConnected(false);
     } finally {
       setIsConnecting(false);
@@ -476,12 +489,10 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
         setStreamingStatus(outputActive ? 'streaming' : 'stopped');
       });
 
-      // Add scene-specific handlers
       obs.on('SceneCreated', refreshScenes);
       obs.on('SceneRemoved', refreshScenes);
       obs.on('SceneNameChanged', refreshScenes);
       
-      // Add audio monitoring handlers
       obs.on('InputVolumeMeters', (data) => {
         console.log('Audio levels:', data);
       });
@@ -509,7 +520,6 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isConnected, currentScene]);
 
-  // Add this effect to sync audio with scene changes
   useEffect(() => {
     if (currentScene) {
       refreshAudioSources();
