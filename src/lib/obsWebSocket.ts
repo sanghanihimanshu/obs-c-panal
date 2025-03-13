@@ -1,4 +1,3 @@
-
 import OBSWebSocket from 'obs-websocket-js';
 
 export const createOBSConnection = (url: string, password?: string): Promise<OBSWebSocket> => {
@@ -166,14 +165,23 @@ export const getAudioSources = async (obs: OBSWebSocket): Promise<any[]> => {
             inputName: source.inputName
           });
           
-          const inputMuteResponse = await obs.call('GetInputMute', {
-            inputName: source.inputName
-          });
+          let muted = false;
+          try {
+            const inputMuteResponse = await obs.call('GetInputMute', {
+              inputName: source.inputName
+            });
+            
+            if (inputMuteResponse && typeof inputMuteResponse.inputMuted === 'boolean') {
+              muted = inputMuteResponse.inputMuted;
+            }
+          } catch (muteError) {
+            console.warn(`Could not get mute state for ${source.inputName}:`, muteError);
+          }
           
           return {
             ...source,
             volume: inputVolumeResponse.inputVolumeMul,
-            muted: inputMuteResponse.inputMuted
+            muted: muted
           };
         } catch {
           return source;
@@ -224,36 +232,35 @@ export const getStats = async (obs: OBSWebSocket): Promise<any> => {
   try {
     const statsData = await obs.call('GetStats');
     
-    // Convert string values to numbers, handling all possible types correctly
     const processedStats = {
       cpuUsage: typeof statsData.cpuUsage === 'number' 
         ? statsData.cpuUsage 
-        : (statsData.cpuUsage !== undefined && statsData.cpuUsage !== null)
-          ? parseFloat(String(statsData.cpuUsage))
+        : statsData.cpuUsage !== undefined && statsData.cpuUsage !== null
+          ? Number(statsData.cpuUsage)
           : undefined,
           
       memoryUsage: typeof statsData.memoryUsage === 'number' 
         ? statsData.memoryUsage 
-        : (statsData.memoryUsage !== undefined && statsData.memoryUsage !== null)
-          ? parseFloat(String(statsData.memoryUsage))
+        : statsData.memoryUsage !== undefined && statsData.memoryUsage !== null
+          ? Number(statsData.memoryUsage)
           : undefined,
           
       activeFps: typeof statsData.activeFps === 'number' 
         ? statsData.activeFps 
-        : (statsData.activeFps !== undefined && statsData.activeFps !== null)
-          ? parseFloat(String(statsData.activeFps))
+        : statsData.activeFps !== undefined && statsData.activeFps !== null
+          ? Number(statsData.activeFps)
           : undefined,
           
       averageFrameRenderTime: typeof statsData.averageFrameRenderTime === 'number' 
         ? statsData.averageFrameRenderTime 
-        : (statsData.averageFrameRenderTime !== undefined && statsData.averageFrameRenderTime !== null)
-          ? parseFloat(String(statsData.averageFrameRenderTime))
+        : statsData.averageFrameRenderTime !== undefined && statsData.averageFrameRenderTime !== null
+          ? Number(statsData.averageFrameRenderTime)
           : undefined,
           
       renderSkippedFrames: typeof statsData.renderSkippedFrames === 'number' 
         ? statsData.renderSkippedFrames 
-        : (statsData.renderSkippedFrames !== undefined && statsData.renderSkippedFrames !== null)
-          ? parseFloat(String(statsData.renderSkippedFrames))
+        : statsData.renderSkippedFrames !== undefined && statsData.renderSkippedFrames !== null
+          ? Number(statsData.renderSkippedFrames)
           : undefined
     };
     
