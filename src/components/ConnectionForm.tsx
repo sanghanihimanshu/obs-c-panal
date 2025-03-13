@@ -1,22 +1,40 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOBS } from '@/context/OBSContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LockIcon, WifiIcon, WifiOffIcon } from 'lucide-react';
+import { storage } from '@/lib/storage';
+import { Checkbox } from '@radix-ui/react-checkbox';
 
 const ConnectionForm = () => {
   const { isConnected, isConnecting, connect, disconnect } = useOBS();
   const [url, setUrl] = useState('ws://localhost:4455');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [allowStore, setAllowStore] = useState(false);
+
+  useEffect(() => {
+    const savedCreds = storage.getCredentials();
+    if (savedCreds) {
+      setUrl(savedCreds.url);
+      setPassword(savedCreds.password);
+      setAllowStore(true);
+      if (savedCreds.allowStore) {
+        connect(savedCreds.url, savedCreds.password);
+      }
+    }
+  }, []);
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isConnected) {
       await connect(url, password);
+      if (allowStore) {
+        storage.saveCredentials({ url, password, allowStore });
+      }
     } else {
       disconnect();
+      storage.clearCredentials();
     }
   };
 
@@ -67,6 +85,18 @@ const ConnectionForm = () => {
           </div>
         </div>
         
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="allowStore"
+            checked={allowStore}
+            onCheckedChange={(checked) => setAllowStore(checked as boolean)}
+            className="w-4 h-4 border border-gray-300 rounded-sm focus:ring-primary focus:ring-2"
+          />
+          <label htmlFor="allowStore" className="text-sm text-muted-foreground">
+            Remember connection details
+          </label>
+        </div>
+
         <Button
           type="submit"
           className="w-full transition-all duration-200"

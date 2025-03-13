@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -91,10 +90,11 @@
   .obs-card {
     @apply bg-card rounded-lg border shadow-sm transition-all duration-300 
            hover:shadow-md p-4 animate-fade-in;
+    color: black; /* Add this line to make the text black */
   }
   
   .obs-panel {
-    @apply bg-white/80 backdrop-blur-md rounded-xl border shadow-sm
+    @apply backdrop-blur-md rounded-xl border shadow-sm
            hover:shadow-md transition-all duration-300;
   }
   
@@ -116,7 +116,7 @@
   }
 
   .glass-card {
-    @apply bg-white/70 backdrop-blur-md rounded-xl border shadow-sm
+    @apply backdrop-blur-md rounded-xl border shadow-sm
            hover:shadow-md transition-all duration-300;
   }
   

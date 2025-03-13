@@ -1,7 +1,8 @@
-
 import React from 'react';
 import { useOBS } from '@/context/OBSContext';
 import { Video, Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -11,27 +12,17 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
   const { isConnected, currentScene } = useOBS();
 
   return (
-    <div className="bg-white/90 backdrop-blur-md border-b sticky top-0 z-10 animate-fade-in">
-      <div className="container mx-auto p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={toggleSidebar} className="icon-btn md:hidden">
-            <Menu className="w-5 h-5" />
-          </button>
-          
-          <div className="flex items-center gap-2">
-            <Video className="w-6 h-6 text-primary" />
-            <h1 className="text-xl font-medium">OBS Control</h1>
-          </div>
+    <header className="h-[65px] border-b backdrop-blur-sm bg-background/50 sticky top-0 z-50">
+      <div className="container h-full flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+            <Menu className="h-5 w-5" />
+          </Button>
+          <h1 className="font-bold text-xl">OBS Control Panel</h1>
         </div>
-        
-        {isConnected && currentScene && (
-          <div className="flex items-center gap-2">
-            <div className="indicator-dot indicator-green"></div>
-            <span className="text-sm font-medium">Live: {currentScene}</span>
-          </div>
-        )}
+        <ThemeToggle />
       </div>
-    </div>
+    </header>
   );
 };
 

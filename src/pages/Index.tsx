@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { OBSProvider } from '@/context/OBSContext';
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import ConnectionForm from '@/components/ConnectionForm';
 import SceneSwitcher from '@/components/SceneSwitcher';
@@ -9,6 +8,7 @@ import StatsMonitor from '@/components/StatsMonitor';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import Layout from '@/components/Layout';
 
 const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -26,14 +26,14 @@ const Index = () => {
   useKeyboardShortcuts();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header toggleSidebar={toggleSidebar} />
       
       <div className="flex-1 flex">
         {/* Sidebar */}
         <div 
           className={cn(
-            "w-72 h-[calc(100vh-65px)] bg-secondary/30 backdrop-blur-sm flex-shrink-0 fixed md:static left-0 top-[65px] z-20 overflow-y-auto transition-transform duration-300 ease-in-out border-r",
+            "w-72 h-[calc(100vh-65px)] bg-secondary/30 backdrop-blur-sm flex-shrink-0 fixed md:static left-0 top-[65px] z-20 overflow-y-auto transition-transform duration-300 ease-in-out border-r border-border",
             {
               "translate-x-0": sidebarOpen,
               "-translate-x-full md:translate-x-0": !sidebarOpen,
@@ -73,4 +73,11 @@ const Index = () => {
   );
 };
 
-export default Index;
+// Wrap with Layout at export
+export default function IndexPage() {
+  return (
+    <Layout>
+      <Index />
+    </Layout>
+  );
+}
