@@ -238,41 +238,31 @@ export const getStats = async (obs: OBSWebSocket): Promise<any> => {
         ? statsData.cpuUsage 
         : typeof statsData.cpuUsage === 'string'
           ? parseFloat(statsData.cpuUsage)
-          : statsData.cpuUsage !== undefined && statsData.cpuUsage !== null
-            ? parseFloat(String(statsData.cpuUsage))
-            : undefined,
+          : undefined,
           
       memoryUsage: typeof statsData.memoryUsage === 'number' 
         ? statsData.memoryUsage 
         : typeof statsData.memoryUsage === 'string'
           ? parseFloat(statsData.memoryUsage)
-          : statsData.memoryUsage !== undefined && statsData.memoryUsage !== null
-            ? parseFloat(String(statsData.memoryUsage))
-            : undefined,
+          : undefined,
           
       activeFps: typeof statsData.activeFps === 'number' 
         ? statsData.activeFps 
         : typeof statsData.activeFps === 'string'
           ? parseFloat(statsData.activeFps)
-          : statsData.activeFps !== undefined && statsData.activeFps !== null
-            ? parseFloat(String(statsData.activeFps))
-            : undefined,
+          : undefined,
           
       averageFrameRenderTime: typeof statsData.averageFrameRenderTime === 'number' 
         ? statsData.averageFrameRenderTime 
         : typeof statsData.averageFrameRenderTime === 'string'
           ? parseFloat(statsData.averageFrameRenderTime)
-          : statsData.averageFrameRenderTime !== undefined && statsData.averageFrameRenderTime !== null
-            ? parseFloat(String(statsData.averageFrameRenderTime))
-            : undefined,
+          : undefined,
           
       renderSkippedFrames: typeof statsData.renderSkippedFrames === 'number' 
         ? statsData.renderSkippedFrames 
         : typeof statsData.renderSkippedFrames === 'string'
           ? parseFloat(statsData.renderSkippedFrames)
-          : statsData.renderSkippedFrames !== undefined && statsData.renderSkippedFrames !== null
-            ? parseFloat(String(statsData.renderSkippedFrames))
-            : undefined
+          : undefined
     };
     
     return processedStats;
