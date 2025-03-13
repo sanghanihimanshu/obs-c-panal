@@ -6,7 +6,7 @@ type OBSContextType = {
   obs: OBSWebSocket;
   isConnected: boolean;
   isConnecting: boolean;
-  connect: (url: string, password?: string) => Promise<void>;
+  connect: (url: string, password?: string, bypassSecurity?: boolean) => Promise<void>;
   disconnect: () => void;
   scenes: any[];
   currentScene: string;
@@ -243,7 +243,7 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     await refreshStats();
   };
 
-  const connect = async (url: string, password?: string) => {
+  const connect = async (url: string, password?: string, bypassSecurity?: boolean) => {
     if (isConnected) {
       await disconnect();
     }
@@ -251,8 +251,11 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     setIsConnecting(true);
     
     try {
-      if (window.isSecureContext && url.startsWith('ws://')) {
+      const isLocal = url.includes('localhost') || url.includes('127.0.0.1');
+      
+      if (window.isSecureContext && url.startsWith('ws://') && !isLocal && !bypassSecurity) {
         console.warn('Attempting to connect to insecure WebSocket from secure context');
+        throw new Error('Cannot connect to insecure WebSocket (ws://) from secure context without explicitly allowing it.');
       }
 
       await obs.connect(url, password);
@@ -266,8 +269,10 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
       
       if (error.code === 1006) {
         errorMessage = 'Connection closed abnormally. Check if OBS is running with WebSocket enabled.';
-      } else if (error.message?.includes('Mixed Content')) {
-        errorMessage = 'Cannot connect to insecure WebSocket (ws://) from secure context. Try using wss:// or enabling mixed content in browser settings.';
+      } else if (error.message?.includes('Mixed Content') || error.message?.includes('insecure') || error.name === 'SecurityError') {
+        errorMessage = bypassSecurity 
+          ? 'Cannot connect despite bypass attempt. Your browser may have additional security restrictions.'
+          : 'Security restriction: Cannot connect to insecure WebSocket from secure context. Enable "Allow Insecure Connection" or use wss://.';
       } else if (error.message) {
         errorMessage = `Connection error: ${error.message}`;
       }

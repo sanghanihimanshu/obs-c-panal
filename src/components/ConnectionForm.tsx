@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { useOBS } from '@/context/OBSContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { LockIcon, WifiIcon, WifiOffIcon, ShieldIcon, InfoIcon } from 'lucide-react';
+import { LockIcon, WifiIcon, WifiOffIcon, ShieldIcon, InfoIcon, AlertTriangleIcon } from 'lucide-react';
 import { storage } from '@/lib/storage';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
 
 const ConnectionForm = () => {
   const { isConnected, isConnecting, connect, disconnect } = useOBS();
@@ -15,15 +17,18 @@ const ConnectionForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [allowStore, setAllowStore] = useState(false);
   const [showSecurityWarning, setShowSecurityWarning] = useState(false);
+  const [bypassSecurityWarning, setBypassSecurityWarning] = useState(false);
 
   // Check if the connection is insecure (ws://) versus secure (wss://)
   const isInsecureConnection = url.startsWith('ws://');
   const isSecureContext = window.isSecureContext;
+  const isLocalhost = url.includes('localhost') || url.includes('127.0.0.1');
 
   useEffect(() => {
     // Show security warning if trying to use insecure WebSocket in secure context
-    setShowSecurityWarning(isSecureContext && isInsecureConnection);
-  }, [url, isSecureContext, isInsecureConnection]);
+    // unless it's localhost which is generally allowed
+    setShowSecurityWarning(isSecureContext && isInsecureConnection && !isLocalhost);
+  }, [url, isSecureContext, isInsecureConnection, isLocalhost]);
 
   useEffect(() => {
     const savedCreds = storage.getCredentials();
@@ -33,8 +38,17 @@ const ConnectionForm = () => {
       setAllowStore(true);
       if (savedCreds.allowStore) {
         // Don't auto-connect if we're in a secure context with an insecure URL
-        if (!(window.isSecureContext && savedCreds.url.startsWith('ws://'))) {
-          connect(savedCreds.url, savedCreds.password);
+        // unless it's localhost or the user has chosen to bypass the security warning
+        const shouldAutoConnect = !(
+          window.isSecureContext && 
+          savedCreds.url.startsWith('ws://') && 
+          !savedCreds.url.includes('localhost') && 
+          !savedCreds.url.includes('127.0.0.1') && 
+          !savedCreds.bypassSecurity
+        );
+        
+        if (shouldAutoConnect) {
+          connect(savedCreds.url, savedCreds.password, savedCreds.bypassSecurity);
         }
       }
     }
@@ -43,9 +57,21 @@ const ConnectionForm = () => {
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isConnected) {
-      await connect(url, password);
+      if (showSecurityWarning && !bypassSecurityWarning) {
+        toast.warning(
+          "Connection may fail due to security restrictions. Enable 'Allow Insecure Connection' to bypass."
+        );
+        return;
+      }
+      
+      await connect(url, password, bypassSecurityWarning);
       if (allowStore) {
-        storage.saveCredentials({ url, password, allowStore });
+        storage.saveCredentials({ 
+          url, 
+          password, 
+          allowStore,
+          bypassSecurity: bypassSecurityWarning 
+        });
       }
     } else {
       disconnect();
@@ -56,7 +82,9 @@ const ConnectionForm = () => {
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUrl = e.target.value;
     setUrl(newUrl);
-    setShowSecurityWarning(window.isSecureContext && newUrl.startsWith('ws://'));
+    const isNewUrlInsecure = newUrl.startsWith('ws://');
+    const isLocalUrl = newUrl.includes('localhost') || newUrl.includes('127.0.0.1');
+    setShowSecurityWarning(window.isSecureContext && isNewUrlInsecure && !isLocalUrl);
   };
 
   return (
@@ -68,9 +96,20 @@ const ConnectionForm = () => {
       
       {showSecurityWarning && (
         <Alert variant="destructive" className="mb-4">
-          <InfoIcon className="h-4 w-4 mr-2" />
+          <AlertTriangleIcon className="h-4 w-4 mr-2" />
           <AlertDescription>
-            Insecure WebSocket (ws://) connections may not work in secure contexts. Try using wss:// or enable "Mixed Content" in your browser settings.
+            <p className="mb-2">Insecure WebSocket (ws://) connections to non-local addresses are blocked in secure contexts (HTTPS).</p>
+            <div className="flex items-center mt-2 space-x-2">
+              <Switch 
+                id="bypass-security"
+                checked={bypassSecurityWarning}
+                onCheckedChange={setBypassSecurityWarning}
+              />
+              <label htmlFor="bypass-security" className="text-sm font-medium cursor-pointer">
+                Allow Insecure Connection
+              </label>
+            </div>
+            <p className="text-xs mt-2">Note: This may not work in all browsers. Try using wss:// instead.</p>
           </AlertDescription>
         </Alert>
       )}

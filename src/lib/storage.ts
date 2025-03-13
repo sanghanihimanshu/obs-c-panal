@@ -1,26 +1,31 @@
-interface OBSCredentials {
+
+type Credentials = {
   url: string;
   password: string;
   allowStore: boolean;
-}
+  bypassSecurity?: boolean;
+};
 
-const STORAGE_KEY = 'obs-credentials';
+const CREDENTIALS_KEY = 'obs-controller-credentials';
 
 export const storage = {
-  saveCredentials: (creds: OBSCredentials) => {
-    if (creds.allowStore) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(creds));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
+  saveCredentials: (credentials: Credentials) => {
+    localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(credentials));
+  },
+  
+  getCredentials: (): Credentials | null => {
+    const stored = localStorage.getItem(CREDENTIALS_KEY);
+    if (!stored) return null;
+    
+    try {
+      return JSON.parse(stored) as Credentials;
+    } catch (error) {
+      console.error('Failed to parse stored credentials:', error);
+      return null;
     }
   },
-
-  getCredentials: (): OBSCredentials | null => {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : null;
-  },
-
+  
   clearCredentials: () => {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(CREDENTIALS_KEY);
   }
 };
