@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import OBSWebSocket from 'obs-websocket-js';
 import { toast } from 'sonner';
@@ -55,7 +54,6 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
       const { scenes } = await obs.call('GetSceneList');
       setScenes(scenes);
       
-      // Get current scene
       const { currentProgramSceneName } = await obs.call('GetCurrentProgramScene');
       setCurrentSceneState(currentProgramSceneName);
       
@@ -90,7 +88,6 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
         inputKind: 'audio_input_capture'
       });
       
-      // Also get audio from other types of inputs
       const { inputs: allInputs } = await obs.call('GetInputList');
       const audioInputs = allInputs.filter((input: any) => 
         input.inputKind.includes('audio') || input.inputKind === 'browser_source'
@@ -98,7 +95,6 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
       
       const audioSourcesData = [...inputs, ...audioInputs];
       
-      // Get volume and mute status for each audio source
       const sourcesWithDetails = await Promise.all(
         audioSourcesData.map(async (source: any) => {
           try {
@@ -147,7 +143,6 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
       const response = await obs.call('GetRecordStatus');
       const outputActive = response.outputActive;
       
-      // Check if we have outputPaused in the response
       let isPaused = false;
       if ('outputPaused' in response) {
         isPaused = response.outputPaused as boolean;
@@ -169,16 +164,35 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     try {
       const statsData = await obs.call('GetStats');
       const typeSafeStats: OBSContextType['stats'] = {
-        cpuUsage: typeof statsData.cpuUsage === 'number' ? statsData.cpuUsage : 
-                 (statsData.cpuUsage !== undefined ? Number(statsData.cpuUsage) : undefined),
-        memoryUsage: typeof statsData.memoryUsage === 'number' ? statsData.memoryUsage : 
-                    (statsData.memoryUsage !== undefined ? Number(statsData.memoryUsage) : undefined),
-        fps: typeof statsData.activeFps === 'number' ? statsData.activeFps : 
-            (statsData.activeFps !== undefined ? Number(statsData.activeFps) : undefined),
-        renderTime: typeof statsData.averageFrameRenderTime === 'number' ? statsData.averageFrameRenderTime : 
-                   (statsData.averageFrameRenderTime !== undefined ? Number(statsData.averageFrameRenderTime) : undefined),
-        outputSkippedFrames: typeof statsData.renderSkippedFrames === 'number' ? statsData.renderSkippedFrames : 
-                            (statsData.renderSkippedFrames !== undefined ? Number(statsData.renderSkippedFrames) : undefined)
+        cpuUsage: typeof statsData.cpuUsage === 'number' 
+          ? statsData.cpuUsage 
+          : (statsData.cpuUsage !== undefined && statsData.cpuUsage !== null)
+            ? parseFloat(String(statsData.cpuUsage))
+            : undefined,
+            
+        memoryUsage: typeof statsData.memoryUsage === 'number' 
+          ? statsData.memoryUsage 
+          : (statsData.memoryUsage !== undefined && statsData.memoryUsage !== null)
+            ? parseFloat(String(statsData.memoryUsage))
+            : undefined,
+            
+        fps: typeof statsData.activeFps === 'number' 
+          ? statsData.activeFps 
+          : (statsData.activeFps !== undefined && statsData.activeFps !== null)
+            ? parseFloat(String(statsData.activeFps))
+            : undefined,
+            
+        renderTime: typeof statsData.averageFrameRenderTime === 'number' 
+          ? statsData.averageFrameRenderTime 
+          : (statsData.averageFrameRenderTime !== undefined && statsData.averageFrameRenderTime !== null)
+            ? parseFloat(String(statsData.averageFrameRenderTime))
+            : undefined,
+            
+        outputSkippedFrames: typeof statsData.renderSkippedFrames === 'number' 
+          ? statsData.renderSkippedFrames 
+          : (statsData.renderSkippedFrames !== undefined && statsData.renderSkippedFrames !== null)
+            ? parseFloat(String(statsData.renderSkippedFrames))
+            : undefined
       };
       
       setStats(typeSafeStats);
@@ -253,7 +267,6 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     if (!isConnected || !currentScene) return;
     
     try {
-      // First get the sceneItemId
       const { sceneItems } = await obs.call('GetSceneItemList', {
         sceneName: currentScene
       });
@@ -433,7 +446,6 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     
     setupEventHandlers();
     
-    // Set up a stats refresh interval
     const statsInterval = setInterval(() => {
       if (isConnected) {
         refreshStats();

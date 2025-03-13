@@ -224,18 +224,37 @@ export const getStats = async (obs: OBSWebSocket): Promise<any> => {
   try {
     const statsData = await obs.call('GetStats');
     
-    // Convert string values to numbers if needed
+    // Convert string values to numbers, handling all possible types correctly
     const processedStats = {
-      cpuUsage: typeof statsData.cpuUsage === 'number' ? statsData.cpuUsage : 
-               (statsData.cpuUsage !== undefined ? Number(statsData.cpuUsage) : undefined),
-      memoryUsage: typeof statsData.memoryUsage === 'number' ? statsData.memoryUsage : 
-                  (statsData.memoryUsage !== undefined ? Number(statsData.memoryUsage) : undefined),
-      activeFps: typeof statsData.activeFps === 'number' ? statsData.activeFps : 
-               (statsData.activeFps !== undefined ? Number(statsData.activeFps) : undefined),
-      averageFrameRenderTime: typeof statsData.averageFrameRenderTime === 'number' ? statsData.averageFrameRenderTime : 
-                             (statsData.averageFrameRenderTime !== undefined ? Number(statsData.averageFrameRenderTime) : undefined),
-      renderSkippedFrames: typeof statsData.renderSkippedFrames === 'number' ? statsData.renderSkippedFrames : 
-                          (statsData.renderSkippedFrames !== undefined ? Number(statsData.renderSkippedFrames) : undefined)
+      cpuUsage: typeof statsData.cpuUsage === 'number' 
+        ? statsData.cpuUsage 
+        : (statsData.cpuUsage !== undefined && statsData.cpuUsage !== null)
+          ? parseFloat(String(statsData.cpuUsage))
+          : undefined,
+          
+      memoryUsage: typeof statsData.memoryUsage === 'number' 
+        ? statsData.memoryUsage 
+        : (statsData.memoryUsage !== undefined && statsData.memoryUsage !== null)
+          ? parseFloat(String(statsData.memoryUsage))
+          : undefined,
+          
+      activeFps: typeof statsData.activeFps === 'number' 
+        ? statsData.activeFps 
+        : (statsData.activeFps !== undefined && statsData.activeFps !== null)
+          ? parseFloat(String(statsData.activeFps))
+          : undefined,
+          
+      averageFrameRenderTime: typeof statsData.averageFrameRenderTime === 'number' 
+        ? statsData.averageFrameRenderTime 
+        : (statsData.averageFrameRenderTime !== undefined && statsData.averageFrameRenderTime !== null)
+          ? parseFloat(String(statsData.averageFrameRenderTime))
+          : undefined,
+          
+      renderSkippedFrames: typeof statsData.renderSkippedFrames === 'number' 
+        ? statsData.renderSkippedFrames 
+        : (statsData.renderSkippedFrames !== undefined && statsData.renderSkippedFrames !== null)
+          ? parseFloat(String(statsData.renderSkippedFrames))
+          : undefined
     };
     
     return processedStats;
