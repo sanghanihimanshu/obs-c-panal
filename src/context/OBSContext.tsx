@@ -150,7 +150,7 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
       // Check if we have outputPaused in the response
       let isPaused = false;
       if ('outputPaused' in response) {
-        isPaused = response.outputPaused;
+        isPaused = response.outputPaused as boolean;
       }
       
       if (outputActive) {
@@ -169,11 +169,16 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
     try {
       const statsData = await obs.call('GetStats');
       const typeSafeStats: OBSContextType['stats'] = {
-        cpuUsage: typeof statsData.cpuUsage === 'number' ? statsData.cpuUsage : undefined,
-        memoryUsage: typeof statsData.memoryUsage === 'number' ? statsData.memoryUsage : undefined,
-        fps: typeof statsData.activeFps === 'number' ? statsData.activeFps : undefined,
-        renderTime: typeof statsData.averageFrameRenderTime === 'number' ? statsData.averageFrameRenderTime : undefined,
-        outputSkippedFrames: typeof statsData.renderSkippedFrames === 'number' ? statsData.renderSkippedFrames : undefined
+        cpuUsage: typeof statsData.cpuUsage === 'number' ? statsData.cpuUsage : 
+                 (statsData.cpuUsage !== undefined ? Number(statsData.cpuUsage) : undefined),
+        memoryUsage: typeof statsData.memoryUsage === 'number' ? statsData.memoryUsage : 
+                    (statsData.memoryUsage !== undefined ? Number(statsData.memoryUsage) : undefined),
+        fps: typeof statsData.activeFps === 'number' ? statsData.activeFps : 
+            (statsData.activeFps !== undefined ? Number(statsData.activeFps) : undefined),
+        renderTime: typeof statsData.averageFrameRenderTime === 'number' ? statsData.averageFrameRenderTime : 
+                   (statsData.averageFrameRenderTime !== undefined ? Number(statsData.averageFrameRenderTime) : undefined),
+        outputSkippedFrames: typeof statsData.renderSkippedFrames === 'number' ? statsData.renderSkippedFrames : 
+                            (statsData.renderSkippedFrames !== undefined ? Number(statsData.renderSkippedFrames) : undefined)
       };
       
       setStats(typeSafeStats);
@@ -411,7 +416,7 @@ export const OBSProvider = ({ children }: { children: ReactNode }) => {
         let isPaused = false;
         
         if ('outputPaused' in data) {
-          isPaused = data.outputPaused;
+          isPaused = Boolean(data.outputPaused);
         }
         
         if (outputActive) {

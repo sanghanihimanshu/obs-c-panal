@@ -222,7 +222,23 @@ export const toggleAudioMute = async (
 
 export const getStats = async (obs: OBSWebSocket): Promise<any> => {
   try {
-    return await obs.call('GetStats');
+    const statsData = await obs.call('GetStats');
+    
+    // Convert string values to numbers if needed
+    const processedStats = {
+      cpuUsage: typeof statsData.cpuUsage === 'number' ? statsData.cpuUsage : 
+               (statsData.cpuUsage !== undefined ? Number(statsData.cpuUsage) : undefined),
+      memoryUsage: typeof statsData.memoryUsage === 'number' ? statsData.memoryUsage : 
+                  (statsData.memoryUsage !== undefined ? Number(statsData.memoryUsage) : undefined),
+      activeFps: typeof statsData.activeFps === 'number' ? statsData.activeFps : 
+               (statsData.activeFps !== undefined ? Number(statsData.activeFps) : undefined),
+      averageFrameRenderTime: typeof statsData.averageFrameRenderTime === 'number' ? statsData.averageFrameRenderTime : 
+                             (statsData.averageFrameRenderTime !== undefined ? Number(statsData.averageFrameRenderTime) : undefined),
+      renderSkippedFrames: typeof statsData.renderSkippedFrames === 'number' ? statsData.renderSkippedFrames : 
+                          (statsData.renderSkippedFrames !== undefined ? Number(statsData.renderSkippedFrames) : undefined)
+    };
+    
+    return processedStats;
   } catch (error) {
     console.error('Error fetching stats:', error);
     return {};
